@@ -39,10 +39,12 @@ def main(args):
     elif size==24:
         net='RNet'
         save_size=48
-    #图片数据地址
-    base_dir='../data/WIDER_train/'
-    #处理后的图片存放地址
-    data_dir='../data/%d'%(save_size)
+
+    # 图片数据地址
+    base_dir = 'g:/mtcnn-dataset/data/WIDER_train/'
+    # 处理后的图片存放地址
+    data_dir = 'g:/mtcnn-dataset/data/%d' % (save_size)
+
     neg_dir=os.path.join(data_dir,'negative')
     pos_dir=os.path.join(data_dir,'positive')
     part_dir=os.path.join(data_dir,'part')
@@ -55,7 +57,7 @@ def main(args):
     if net=='RNet':
         RNet=Detector(R_Net,24,batch_size[1],model_path[1])
         detectors[1]=RNet
-    basedir='../data/'
+
     filename='../data/wider_face_train_bbx_gt.txt'
     #读取文件的image和box对应函数在utils中
     data=read_annotation(base_dir,filename)
@@ -90,13 +92,13 @@ def save_hard_example(save_size, data,neg_dir,pos_dir,part_dir,save_path):
 
     
     # save files
-    neg_label_file = "../data/%d/neg_%d.txt" % (save_size, save_size)
+    neg_label_file = "g:/mtcnn-dataset/data/%d/neg_%d.txt" % (save_size, save_size)
     neg_file = open(neg_label_file, 'w')
 
-    pos_label_file = "../data/%d/pos_%d.txt" % (save_size, save_size)
+    pos_label_file = "g:/mtcnn-dataset/data/%d/pos_%d.txt" % (save_size, save_size)
     pos_file = open(pos_label_file, 'w')
 
-    part_label_file = "../data/%d/part_%d.txt" % (save_size, save_size)
+    part_label_file = "g:/mtcnn-dataset/data/%d/part_%d.txt" % (save_size, save_size)
     part_file = open(part_label_file, 'w')
     #read detect result
     det_boxes = pickle.load(open(os.path.join(save_path, 'detections.pkl'), 'rb'))
@@ -109,7 +111,10 @@ def save_hard_example(save_size, data,neg_dir,pos_dir,part_dir,save_path):
     p_idx = 0
     d_idx = 0
     image_done = 0
-    
+    neg_imgs = []
+    pos_imgs = []
+    part_imgs = []
+
     for im_idx, dets, gts in tqdm(zip(im_idx_list, det_boxes, gt_boxes_list)):
         gts = np.array(gts, dtype=np.float32).reshape(-1, 4)
         image_done += 1
@@ -142,7 +147,9 @@ def save_hard_example(save_size, data,neg_dir,pos_dir,part_dir,save_path):
                 save_file = os.path.join(neg_dir, "%s.jpg" % n_idx)
                 
                 neg_file.write(save_file + ' 0\n')
-                cv2.imwrite(save_file, resized_im)
+                # cv2.imwrite(save_file, resized_im)
+                neg_imgs.append(resized_im)
+
                 n_idx += 1
                 neg_num += 1
             else:
@@ -162,15 +169,24 @@ def save_hard_example(save_size, data,neg_dir,pos_dir,part_dir,save_path):
                     save_file = os.path.join(pos_dir, "%s.jpg" % p_idx)
                     pos_file.write(save_file + ' 1 %.2f %.2f %.2f %.2f\n' % (
                         offset_x1, offset_y1, offset_x2, offset_y2))
-                    cv2.imwrite(save_file, resized_im)
+                    # cv2.imwrite(save_file, resized_im)
+                    pos_imgs.append(resized_im)
+
                     p_idx += 1
 
                 elif np.max(Iou) >= 0.4:
                     save_file = os.path.join(part_dir, "%s.jpg" % d_idx)
                     part_file.write(save_file + ' -1 %.2f %.2f %.2f %.2f\n' % (
                         offset_x1, offset_y1, offset_x2, offset_y2))
-                    cv2.imwrite(save_file, resized_im)
+                    # cv2.imwrite(save_file, resized_im)
+                    part_imgs.append(resized_im)
+
                     d_idx += 1
+
+    np.save(os.path.join(save_path, "positive", "img.npy"), np.array(pos_imgs))
+    np.save(os.path.join(save_path, "negative", "img.npy"), np.array(neg_imgs))
+    np.save(os.path.join(save_path, "part", "img.npy"), np.array(part_imgs))
+
     neg_file.close()
     part_file.close()
     pos_file.close()

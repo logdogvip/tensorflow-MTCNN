@@ -7,7 +7,7 @@
 import numpy as np
 npr=np.random
 import os
-data_dir='../data/'
+data_dir='g:/mtcnn-dataset/data/'
 
 
 # In[2]:

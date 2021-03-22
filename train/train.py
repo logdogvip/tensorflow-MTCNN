@@ -18,7 +18,7 @@ net_factorys=[P_Net,R_Net,O_Net]
 
 def main(args):
     size=args.input_size
-    base_dir=os.path.join('../data/',str(size))
+    base_dir=os.path.join('g:/mtcnn-dataset/data/',str(size))
     
     if size==12:
         net='PNet'

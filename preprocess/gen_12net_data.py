@@ -12,18 +12,19 @@ import cv2
 import numpy as np
 npr=np.random
 from tqdm import  tqdm
-from utils import IOU 
+from utils import IOU
 
 #face的id对应label的txt
 anno_file='../data/wider_face_train.txt'
 #图片地址
 im_dir='../data/WIDER_train/images'
+im_dir='G:/mtcnn-dataset/data/WIDER_train/images'
 #pos，part,neg裁剪图片放置位置
-pos_save_dir='../data/12/positive'
-part_save_dir='../data/12/part'
-neg_save_dir='../data/12/negative'
+pos_save_dir='G:/mtcnn-dataset/data/12/positive'
+part_save_dir='G:/mtcnn-dataset/data/12/part'
+neg_save_dir='G:/mtcnn-dataset/data/12/negative'
 #PNet数据地址
-save_dir='../data/12'
+save_dir='G:/mtcnn-dataset/data/12'
 
 
 # In[2]:
@@ -52,6 +53,11 @@ n_idx=0
 d_idx=0
 #记录读取图片数
 idx=0
+
+pos_imgs = []
+neg_imgs = []
+part_imgs = []
+
 for annotation in tqdm(annotations):
     annotation=annotation.strip().split(' ')
     im_path=annotation[0]
@@ -86,7 +92,9 @@ for annotation in tqdm(annotations):
         if np.max(Iou)<0.3:
             save_file=os.path.join(neg_save_dir,'%s.jpg'%n_idx)
             f2.write(neg_save_dir+'/%s.jpg'%n_idx+' 0\n')
-            cv2.imwrite(save_file,resized_im)
+            # cv2.imwrite(save_file,resized_im)
+            neg_imgs.append(resized_im)
+
             n_idx+=1
             neg_num+=1
     
@@ -120,8 +128,11 @@ for annotation in tqdm(annotations):
             if np.max(Iou)<0.3:
                 save_file=os.path.join(neg_save_dir,'%s.jpg'%n_idx)
                 f2.write(neg_save_dir+'/%s.jpg'%n_idx+' 0\n')
-                cv2.imwrite(save_file,resized_im)
+                # cv2.imwrite(save_file,resized_im)
+                neg_imgs.append(resized_im)
+
                 n_idx+=1
+
         for i in range(20):
             #缩小随机选取size范围，更多截取pos和part图像
             size=npr.randint(int(min(w,h)*0.8),np.ceil(1.25*max(w,h)))
@@ -160,13 +171,17 @@ for annotation in tqdm(annotations):
                 save_file=os.path.join(pos_save_dir,'%s.jpg'%p_idx)
                 f1.write(pos_save_dir+'/%s.jpg'%p_idx+' 1 %.2f %.2f %.2f %.2f\n'%(offset_x1,
                         offset_y1,offset_x2,offset_y2))
-                cv2.imwrite(save_file,resized_im)
+                # cv2.imwrite(save_file,resized_im)
+                pos_imgs.append(resized_im)
+
                 p_idx+=1
             elif iou>=0.4:
                 save_file=os.path.join(part_save_dir,'%s.jpg'%d_idx)
                 f3.write(part_save_dir+'/%s.jpg'%d_idx+' -1 %.2f %.2f %.2f %.2f\n'%(offset_x1,
                         offset_y1,offset_x2,offset_y2))
-                cv2.imwrite(save_file,resized_im)
+                # cv2.imwrite(save_file,resized_im)
+                part_imgs.append(resized_im)
+
                 d_idx+=1
    
    
@@ -174,4 +189,8 @@ print('%s 个图片已处理，pos：%s  part: %s neg:%s'%(idx,p_idx,d_idx,n_idx
 f1.close()
 f2.close()
 f3.close()
+
+np.save(os.path.join(neg_save_dir, "img.npy"), np.array(neg_imgs))
+np.save(os.path.join(pos_save_dir, "img.npy"), np.array(pos_imgs))
+np.save(os.path.join(part_save_dir, "img.npy"), np.array(part_imgs))
 

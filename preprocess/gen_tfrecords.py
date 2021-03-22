@@ -6,6 +6,7 @@
 
 import os
 import random
+import numpy as np
 import sys
 import time
 import tensorflow as tf
@@ -15,13 +16,18 @@ import argparse
 
 
 # In[ ]:
-
+# 数据存放地址
+dataset_dir = 'g:/mtcnn-dataset/data/'
 
 def main(args):
     '''生成tfrecords文件'''
     size=args.input_size
-    #数据存放地址
-    dataset_dir='../data/'
+
+    pos_imgs = np.load(os.path.join(dataset_dir, str(size), "positive", "img.npy"))
+    neg_imgs = np.load(os.path.join(dataset_dir, str(size), "negative", "img.npy"))
+    part_imgs = np.load(os.path.join(dataset_dir, str(size), "part", "img.npy"))
+
+
     #tfrecord存放地址
     output_dir=os.path.join(dataset_dir,str(size)+'/tfrecord')
     if not os.path.exists(output_dir):
@@ -31,6 +37,7 @@ def main(args):
         net='PNet'
         tf_filenames=[os.path.join(output_dir,'train_%s_landmark.tfrecord'%(net))]
         items=['12/train_pnet_landmark.txt']
+        landmark_imgs = np.load(os.path.normpath(os.path.join(dataset_dir, str(size), "train_PNet_landmark_aug", "img.npy")))
     elif size==24:
         net='RNet'
         tf_filename1=os.path.join(output_dir,'pos_landmark.tfrecord')
@@ -43,6 +50,7 @@ def main(args):
         item4='%d/landmark_%d_aug.txt'%(size,size)
         tf_filenames=[tf_filename1,tf_filename2,tf_filename3,tf_filename4]
         items=[item1,item2,item3,item4]
+        landmark_imgs = np.load(os.path.normpath(os.path.join(dataset_dir, str(size), "train_RNet_landmark_aug", "img.npy")))
     elif size==48:
         net='ONet'
         tf_filename1=os.path.join(output_dir,'pos_landmark.tfrecord')
@@ -55,7 +63,7 @@ def main(args):
         item4='%d/landmark_%d_aug.txt'%(size,size)
         tf_filenames=[tf_filename1,tf_filename2,tf_filename3,tf_filename4]
         items=[item1,item2,item3,item4]
-    
+        landmark_imgs = np.load(os.path.normpath(os.path.join(dataset_dir, str(size), "train_ONet_landmark_aug", "img.npy")))
     if tf.gfile.Exists(tf_filenames[0]):
         print('tfrecords文件早已生成，无需此操作')
         return
@@ -69,10 +77,7 @@ def main(args):
         with tf.python_io.TFRecordWriter(tf_filename) as tfrecord_writer:
             for image_example in tqdm(dataset):
                 filename=image_example['filename']
-                try:
-                    _add_to_tfrecord(filename,image_example,tfrecord_writer)
-                except:
-                    print(filename)
+                _add_to_tfrecord(filename,image_example,tfrecord_writer, pos_imgs, neg_imgs, part_imgs, landmark_imgs)
     print('完成转换')
                     
     
@@ -137,14 +142,14 @@ def get_dataset(dir,item):
 # In[5]:
 
 
-def _add_to_tfrecord(filename, image_example, tfrecord_writer):
+def _add_to_tfrecord(filename, image_example, tfrecord_writer, pos_imgs, neg_imgs, part_imgs, landmark_imgs):
     '''转换成tfrecord文件
     参数：
       filename：图片文件名
       image_example:数据
       tfrecord_writer:写入文件
     '''
-    image_data, height, width = _process_image_withoutcoder(filename)
+    image_data, height, width = _process_image_withoutcoder(filename, pos_imgs, neg_imgs, part_imgs, landmark_imgs)
     example = _convert_to_example_simple(image_example, image_data)
     tfrecord_writer.write(example.SerializeToString())
 
@@ -152,9 +157,24 @@ def _add_to_tfrecord(filename, image_example, tfrecord_writer):
 # In[3]:
 
 
-def _process_image_withoutcoder(filename):
+def _process_image_withoutcoder(filename, pos_imgs, neg_imgs, part_imgs, landmark_imgs):
     '''读取图片文件,返回图片大小'''
-    image=cv2.imread(filename)
+    filename = os.path.normpath(filename)
+    # image=cv2.imread(filename)
+
+    idx = filename.split(os.path.sep)[-1].replace(".jpg", "")
+
+    if "positive" in filename:
+        image = pos_imgs[int(idx)]
+    elif "negative" in filename:
+        image = neg_imgs[int(idx)]
+    elif "part" in filename:
+        image = part_imgs[int(idx)]
+    elif "_landmark_" in filename:
+        image = landmark_imgs[int(idx)]
+    else:
+        raise Exception("error image path")
+
     image_data=image.tostring()
     assert len(image.shape)==3
     height=image.shape[0]

@@ -14,7 +14,7 @@ import argparse
 from tqdm import tqdm
 from utils import IOU
 from BBox_utils import getDataFromTxt,BBox
-data_dir='../data'
+data_dir='g:/mtcnn-dataset/data'
 
 
 # In[3]:
@@ -41,17 +41,18 @@ def main(args):
     if not os.path.exists(dstdir):
         os.mkdir(dstdir)
     #label记录txt
-    ftxt=os.path.join(data_dir,'trainImageList.txt')
+    ftxt=os.path.join('../data/trainImageList.txt')
     #记录label的txt
     f=open(os.path.join(OUTPUT,'landmark_%d_aug.txt'%(size)),'w')
     #获取图像路径，box，关键点
     data=getDataFromTxt(ftxt,data_dir)
     idx=0
+    arr = []
     for (imgPath,box,landmarkGt) in tqdm(data):
         #存储人脸图片和关键点
         F_imgs=[]
         F_landmarks=[]
-        img=cv2.imread(imgPath)
+        img=cv2.imread(os.path.join(data_dir, imgPath))
         
         img_h,img_w,img_c=img.shape
         gt_box=np.array([box.left,box.top,box.right,box.bottom])
@@ -148,10 +149,14 @@ def main(args):
                 continue
             if np.sum(np.where(F_landmarks[i]>=1,1,0))>0:
                 continue
-            cv2.imwrite(os.path.join(dstdir,'%d.jpg'%(image_id)),F_imgs[i])
+            # cv2.imwrite(os.path.join(dstdir,'%d.jpg'%(image_id)),F_imgs[i])
+            arr.append(F_imgs[i])
+
             landmarks=list(map(str,list(F_landmarks[i])))
             f.write(os.path.join(dstdir,'%d.jpg'%(image_id))+' -2 '+' '.join(landmarks)+'\n')
             image_id+=1
+
+    np.save(os.path.join(dstdir, "img.npy"), np.array(arr))
     f.close()
     return F_imgs,F_landmarks
 
